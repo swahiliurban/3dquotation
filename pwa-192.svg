@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="48" fill="#f5fbf8" />
+  <rect x="24" y="24" width="144" height="144" rx="36" fill="#10211d" />
+  <path d="M48 44h50c27.614 0 50 22.386 50 50s-22.386 50-50 50H48V44Z" fill="#0f8b6d" />
+  <path d="M96 44h40c0 34.242-27.758 62-62 62V72c0-15.464 12.536-28 28-28Z" fill="#db8b00" />
+  <text
+    x="96"
+    y="160"
+    text-anchor="middle"
+    font-family="Bahnschrift, Arial, sans-serif"
+    font-weight="700"
+    font-size="28"
+    fill="#f5fbf8"
+  >
+    QuoteFlow
+  </text>
+</svg>

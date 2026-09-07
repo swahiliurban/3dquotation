@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f7a49" />
+    <title>QuoteFlow Offline</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5fbf8;
+        --card: rgba(255, 255, 255, 0.92);
+        --border: rgba(15, 122, 73, 0.14);
+        --text: #12202a;
+        --muted: #56707d;
+        --brand: #0f7a49;
+        --accent: #dd8201;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+        font-family: Manrope, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(15, 122, 73, 0.14), transparent 28%),
+          linear-gradient(rgba(11, 93, 71, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(11, 93, 71, 0.04) 1px, transparent 1px),
+          var(--bg);
+        background-size: auto, 32px 32px, 32px 32px, auto;
+        color: var(--text);
+      }
+
+      main {
+        width: min(100%, 520px);
+        border: 1px solid var(--border);
+        border-radius: 32px;
+        padding: 28px;
+        background: var(--card);
+        box-shadow: 0 24px 60px -30px rgba(15, 23, 42, 0.28);
+        backdrop-filter: blur(16px);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        background: rgba(15, 122, 73, 0.1);
+        color: var(--brand);
+      }
+
+      h1 {
+        margin: 18px 0 12px;
+        font-size: clamp(2rem, 5vw, 2.8rem);
+        line-height: 0.98;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .list {
+        margin-top: 20px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .item {
+        border-radius: 20px;
+        background: white;
+        border: 1px solid rgba(15, 122, 73, 0.08);
+        padding: 14px 16px;
+      }
+
+      .item strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--text);
+      }
+
+      .actions {
+        margin-top: 22px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      a,
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 18px;
+        padding: 14px 18px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .primary {
+        background: var(--brand);
+        color: white;
+      }
+
+      .secondary {
+        background: white;
+        color: var(--text);
+        border: 1px solid rgba(15, 122, 73, 0.12);
+      }
+
+      .accent {
+        color: var(--accent);
+        font-weight: 800;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="badge">QuoteFlow Offline</div>
+      <h1>Your workspace is offline right now.</h1>
+      <p>
+        QuoteFlow keeps the app shell available for repeat visits, but this page appears when the
+        browser cannot reach a fresh route yet. Reconnect and try again, or return to the app
+        homepage if it has already been cached on this device.
+      </p>
+
+      <div class="list">
+        <div class="item">
+          <strong>Saved data still matters</strong>
+          Your quotations, invoices, and business profile remain in local storage on this device.
+        </div>
+        <div class="item">
+          <strong>Best mobile experience</strong>
+          Install QuoteFlow to your home screen so repeat launches feel faster and more app-like.
+        </div>
+        <div class="item">
+          <strong>When you reconnect</strong>
+          Refresh once online to load new routes, assets, and the latest app updates.
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" onclick="window.location.reload()">Try again</button>
+        <a class="secondary" href="/">Open QuoteFlow home</a>
+      </div>
+
+      <p style="margin-top: 18px">
+        <span class="accent">Tip:</span> Android Chrome and iPhone Safari both support adding
+        QuoteFlow to the home screen once it is served over HTTPS.
+      </p>
+    </main>
+  </body>
+</html>

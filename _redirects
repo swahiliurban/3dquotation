@@ -1,0 +1,3 @@
+/auth  /  302!
+/auth/*  /  302!
+/* /index.html 200

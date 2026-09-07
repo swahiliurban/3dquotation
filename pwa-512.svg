@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="120" fill="#f5fbf8" />
+  <rect x="56" y="56" width="400" height="400" rx="96" fill="#10211d" />
+  <path d="M118 118h133c73.454 0 133 59.546 133 133s-59.546 133-133 133H118V118Z" fill="#0f8b6d" />
+  <path d="M253 118h103c0 88.366-71.634 160-160 160V198c0-44.183 35.817-80 80-80Z" fill="#db8b00" />
+  <text
+    x="256"
+    y="410"
+    text-anchor="middle"
+    font-family="Bahnschrift, Arial, sans-serif"
+    font-weight="700"
+    font-size="68"
+    fill="#f5fbf8"
+  >
+    QF
+  </text>
+</svg>

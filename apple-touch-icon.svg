@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <rect width="180" height="180" rx="42" fill="#f5fbf8" />
+  <rect x="24" y="24" width="132" height="132" rx="32" fill="#10211d" />
+  <path d="M46 48h45c24.853 0 45 20.147 45 45s-20.147 45-45 45H46V48Z" fill="#0f8b6d" />
+  <path d="M89 48h35c0 30.376-24.624 55-55 55V68c0-11.046 8.954-20 20-20Z" fill="#db8b00" />
+  <text
+    x="90"
+    y="150"
+    text-anchor="middle"
+    font-family="Bahnschrift, Arial, sans-serif"
+    font-weight="700"
+    font-size="24"
+    fill="#f5fbf8"
+  >
+    QF
+  </text>
+</svg>
