@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+  background: #fafaf8;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: #fafaf8;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+
+  .dark * {
+    @apply border-white/10;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply outline-none;
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  .safe-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  .safe-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .form-label {
+    @apply mb-2 block text-[15px] font-semibold leading-5 text-slate-700 dark:text-slate-200;
+  }
+
+  .form-input {
+    @apply min-h-[3.25rem] min-w-0 w-full rounded-[1.15rem] border border-slate-200 bg-white px-4 py-3.5 text-base leading-6 text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-200/70 dark:border-white/10 dark:bg-slate-950/60 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:ring-brand-500/20 md:min-h-12 md:py-3 md:text-[15px];
+  }
+
+  .panel-title {
+    @apply text-base font-extrabold text-slate-900 dark:text-white sm:text-lg;
+  }
+
+  .panel-subtitle {
+    @apply text-[15px] leading-6 text-slate-500 dark:text-slate-300 md:text-sm;
+  }
+
+  .action-link {
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-[1.15rem] border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold leading-5 text-slate-700 transition hover:border-brand-200 hover:text-brand-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-brand-500/50 dark:hover:text-brand-200 md:min-h-11 md:py-2.5 md:text-sm;
+  }
+
+  .glass-card {
+    @apply rounded-[24px] border border-white/70 bg-white/85 shadow-card backdrop-blur dark:border-white/10 dark:bg-slate-900/80 md:rounded-[28px];
+  }
+
+  .document-editor-form,
+  .document-editor-grid,
+  .document-editor-grid > *,
+  .document-editor-grid input,
+  .document-editor-grid textarea,
+  .document-editor-grid select {
+    min-width: 0;
+  }
+
+  .document-mobile-actions {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    overscroll-behavior-y: contain;
+  }
+
+  .document-editor-form {
+    padding-bottom: max(8.5rem, calc(7.5rem + env(safe-area-inset-bottom)));
+  }
+
+  .document-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    width: 210mm;
+    min-height: 297mm;
+    overflow: visible !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .print-area {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
+  .document-table-wrap {
+    overflow: visible !important;
+  }
+
+  .document-table {
+    min-width: 0 !important;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .document-table thead {
+    display: table-header-group;
+  }
+
+  .document-table tr,
+  .document-keep-block {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .document-summary-grid {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
