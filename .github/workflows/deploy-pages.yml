@@ -1,0 +1,84 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages site
+        shell: bash
+        run: |
+          mkdir -p _site
+          rsync -a --exclude='.git' --exclude='.github' --exclude='_site' ./ _site/
+          touch _site/.nojekyll
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path("_site")
+          prefix = "/3dquotation/"
+
+          for name in ("index.html", "offline.html"):
+              p = root / name
+              if p.exists():
+                  s = p.read_text(encoding="utf-8")
+                  for token in ("assets/", "favicon.svg", "favicon-32x32.png",
+                                "favicon-16x16.png", "apple-touch-icon.png",
+                                "mask-icon.svg", "manifest.webmanifest", "sw.js",
+                                "pwa-192.png", "pwa-512.png",
+                                "pwa-maskable-192.png", "pwa-maskable-512.png"):
+                      s = s.replace('"/' + token, '"' + prefix + token)
+                      s = s.replace("'/"+token, "'"+prefix+token)
+                  p.write_text(s, encoding="utf-8")
+
+          p = root / "manifest.webmanifest"
+          if p.exists():
+              s = p.read_text(encoding="utf-8")
+              s = s.replace('"/"', '"' + prefix + '"')
+              for token in ("quotations/", "invoices/", "records", "pwa-192.png",
+                            "pwa-512.png", "pwa-maskable-192.png",
+                            "pwa-maskable-512.png"):
+                  s = s.replace('"/' + token, '"' + prefix + token)
+              p.write_text(s, encoding="utf-8")
+
+          for p in list((root / "assets").glob("*.js")) + [root / "sw.js"]:
+              if not p.exists():
+                  continue
+              s = p.read_text(encoding="utf-8")
+              for token in ("assets/", "manifest.webmanifest", "sw.js",
+                            "favicon.svg", "pwa-192.png", "pwa-512.png",
+                            "pwa-maskable-192.png", "pwa-maskable-512.png"):
+                  s = s.replace('"/' + token, '"' + prefix + token)
+                  s = s.replace("'/"+token, "'"+prefix+token)
+              p.write_text(s, encoding="utf-8")
+          PY
+          cp _site/index.html _site/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
