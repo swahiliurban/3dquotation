@@ -734,6 +734,7 @@ async function getBlobStore() {
           const options = {
             access: "private",
             storeId: process.env.BLOB_STORE_ID,
+            useCache: false,
           };
 
           return {
@@ -747,7 +748,8 @@ async function getBlobStore() {
             },
             async setJSON(key, value) {
               await put(key, JSON.stringify(value), {
-                ...options,
+                access: "private",
+                storeId: process.env.BLOB_STORE_ID,
                 allowOverwrite: true,
                 addRandomSuffix: false,
                 contentType: "application/json",
