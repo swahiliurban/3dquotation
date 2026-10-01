@@ -31,7 +31,8 @@
     "react-router-dom": "^7.6.1",
     "sonner": "^2.0.3",
     "tesseract.js": "^5.1.1",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "@vercel/blob": "^2.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.6",
