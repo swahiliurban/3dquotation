@@ -99,6 +99,12 @@ export async function shareDocumentViaWhatsApp(document: QuoteFlowDocument) {
         text: message,
         files: [pdfFile],
       });
+
+      return {
+        mode: "web-share" as const,
+        message,
+        filename,
+      };
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return {
@@ -107,14 +113,10 @@ export async function shareDocumentViaWhatsApp(document: QuoteFlowDocument) {
         };
       }
 
-      throw error;
+      // Some desktop browsers report file sharing support but reject the
+      // actual share call. Fall through to the WhatsApp Web fallback.
+      console.warn("[QuoteFlow share] Native file share failed; using WhatsApp fallback.", error);
     }
-
-    return {
-      mode: "web-share" as const,
-      message,
-      filename,
-    };
   }
 
   const fallbackMessage = buildShareMessage(document, shareUrl);
