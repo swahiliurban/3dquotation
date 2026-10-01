@@ -726,6 +726,42 @@ function mergeSeedWorkspace(workspace, seed = {}, existed) {
 async function getBlobStore() {
   if (!blobStorePromise) {
     blobStorePromise = (async () => {
+      // Vercel deployment: use the project's private Vercel Blob store.
+      // BLOB_STORE_ID is created automatically when the store is connected.
+      if (process.env.VERCEL && process.env.BLOB_STORE_ID) {
+        try {
+          const { get, put } = await import("@vercel/blob");
+          const options = {
+            access: "private",
+            storeId: process.env.BLOB_STORE_ID,
+          };
+
+          return {
+            async get(key) {
+              const result = await get(key, options);
+              if (!result || result.statusCode !== 200) {
+                return null;
+              }
+              const text = await new Response(result.stream).text();
+              return safeJsonParse(text, null);
+            },
+            async setJSON(key, value) {
+              await put(key, JSON.stringify(value), {
+                ...options,
+                allowOverwrite: true,
+                addRandomSuffix: false,
+                contentType: "application/json",
+                cacheControlMaxAge: 0,
+              });
+            },
+          };
+        } catch (error) {
+          console.error("[QuoteFlow storage] Vercel Blob initialization failed.", error);
+          throw error;
+        }
+      }
+
+      // Netlify deployment: preserve the original Netlify Blobs implementation.
       try {
         const { getStore } = await import("@netlify/blobs");
         const store = getStore({ name: STORE_NAME, consistency: "strong" });
