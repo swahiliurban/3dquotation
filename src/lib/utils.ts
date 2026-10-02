@@ -83,5 +83,5 @@ export function downloadBlob(blob: Blob, fileName: string) {
 }
 
 export function createWhatsappLink(message: string) {
-  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
