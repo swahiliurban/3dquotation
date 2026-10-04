@@ -344,7 +344,7 @@ export function DocumentEditor({
       <PageHeader
         eyebrow={DOCUMENT_TYPE_LABELS[document.type]}
         title={`${documentIsNew ? "Create" : "Edit"} ${document.number}`}
-        description="Save stores the record in the app. Download PDF and Share on WhatsApp first save the record, then export or share the saved document."
+        description="Save stores the record in shared records. PDF first attempts to save; if saving fails, it exports a clearly named unsaved copy."
         actions={
           <>
             <Button
