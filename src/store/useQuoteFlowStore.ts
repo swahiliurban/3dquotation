@@ -235,7 +235,12 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
             ? await createRemoteDocument(identity, document, options)
             : await updateRemoteDocument(identity, document.id, document, options);
 
-          await refreshRemoteWorkspace(set, identity);
+          // A successful save must not become a failure because a second,
+          // full-workspace download fails. Apply the server-confirmed record.
+          set((state) => ({
+            documents: replaceDocument(state.documents, response.document),
+            nextNumbers: response.nextNumbers || state.nextNumbers,
+          }));
           return response.document;
         }
 

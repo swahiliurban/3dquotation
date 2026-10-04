@@ -295,17 +295,31 @@ export function DocumentEditor({
   }
 
   async function handleDownload() {
+    let saved: QuoteFlowDocument | undefined;
     try {
-      const saved = await saveCurrent("download");
-      if (!saved) {
-        return;
+      try {
+        saved = await saveCurrent("download");
+        if (!saved) return; // Respect a cancelled duplicate-number prompt.
+      } catch (error) {
+        toast.warning("Online save failed. Downloading an unsaved copy; keep this page open and retry Save.");
       }
-      const blob = await generateDocumentPdf(saved);
-      downloadBlob(blob, `${saved.number}.pdf`);
-      await markDocumentShared(saved.id, "pdf");
-      toast.success("Saved record and downloaded PDF.");
+      setBusyMode("download");
+      const exportDocument = saved || document;
+      const blob = await generateDocumentPdf(exportDocument);
+      downloadBlob(blob, `${exportDocument.number}${saved ? "" : "-UNSAVED"}.pdf`);
+      if (saved) {
+        toast.success("Saved record and downloaded PDF.");
+        // Recording download history is optional and cannot undo the download.
+        void markDocumentShared(saved.id, "pdf").catch(() => {
+          toast.warning("PDF downloaded, but download history could not sync.");
+        });
+      } else {
+        toast.warning("Unsaved PDF downloaded. This copy is not confirmed in shared records.");
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not download PDF.");
+    } finally {
+      setBusyMode(null);
     }
   }
 

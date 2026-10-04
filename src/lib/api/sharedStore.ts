@@ -133,7 +133,9 @@ export function markBusinessIdentityMigrated(identity: BusinessIdentity) {
 async function parseApiResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) {
-    const error = new Error(payload.error || "QuoteFlow could not save to the shared workspace.");
+    const error = new Error(payload.error || (response.status === 413
+      ? "This request is too large. Reduce uploaded image sizes and try again."
+      : `Workspace request failed (HTTP ${response.status}). Your changes remain in the editor; please try again.`));
     Object.assign(error, { status: response.status });
     throw error;
   }
@@ -158,17 +160,25 @@ async function apiRequest<T>(
     headers.set("X-QuoteFlow-Business-Phone", identity.phone);
   }
 
-  const response = await fetch(path, {
-    method: options.method || "GET",
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
-
-  if (response.status === 204) {
-    return undefined as T;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 60_000);
+  try {
+    const response = await fetch(path, {
+      method: options.method || "GET",
+      headers,
+      signal: controller.signal,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    if (response.status === 204) return undefined as T;
+    return await parseApiResponse<T>(response);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("The workspace request timed out. Your changes remain here. Check Records before retrying Save.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  return parseApiResponse<T>(response);
 }
 
 export async function getRemoteBootstrap(identity: BusinessIdentity) {

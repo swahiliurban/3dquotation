@@ -851,10 +851,32 @@ async function readJson(request) {
 }
 
 function json(status, payload) {
-  return new Response(JSON.stringify(payload), {
+  const text = JSON.stringify(payload);
+  // Stream large JSON responses so growing workspaces do not hit the
+  // serverless buffered-response limit. Gzip reduces repeated embedded logos.
+  const compressed = text.length > 256 * 1024;
+  let offset = 0;
+  const body = compressed
+    ? new ReadableStream({
+        pull(controller) {
+          if (offset >= text.length) {
+            controller.close();
+            return;
+          }
+          let end = Math.min(offset + 64 * 1024, text.length);
+          // Do not split a UTF-16 surrogate pair between encoded chunks.
+          if (end < text.length && text.charCodeAt(end - 1) >= 0xd800 && text.charCodeAt(end - 1) <= 0xdbff) end--;
+          controller.enqueue(new TextEncoder().encode(text.slice(offset, end)));
+          offset = end;
+        },
+      }).pipeThrough(new CompressionStream("gzip"))
+    : text;
+  return new Response(body, {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "private, no-store",
+      ...(compressed ? { "Content-Encoding": "gzip" } : {}),
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers":
         "Content-Type, X-QuoteFlow-Business-Email, X-QuoteFlow-Business-Phone",
