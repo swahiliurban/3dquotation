@@ -77,9 +77,9 @@ export function downloadBlob(blob: Blob, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   window.setTimeout(() => {
-    document.body.removeChild(anchor);
+    anchor.remove();
     URL.revokeObjectURL(url);
-  }, 0);
+  }, 60_000);
 }
 
 export function createWhatsappLink(message: string) {
