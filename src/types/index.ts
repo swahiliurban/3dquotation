@@ -168,6 +168,7 @@ export interface QuoteFlowState {
   theme: ThemeMode;
   user: WorkspaceUser | null;
   isInitializing: boolean;
+  initializationError: string | null;
   isSyncingIdentity: boolean;
   businessIdentity: BusinessIdentity | null;
   businessProfile: BusinessProfile;
@@ -181,6 +182,7 @@ export interface QuoteFlowState {
     email: string;
     phone: string;
     seedProfile?: BusinessProfile;
+    createIfMissing?: boolean;
   }) => Promise<{ workspaceExists: boolean }>;
   disconnectBusinessIdentity: () => Promise<void>;
   signup: (payload: {

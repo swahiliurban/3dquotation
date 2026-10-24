@@ -728,7 +728,10 @@ async function getBlobStore() {
     blobStorePromise = (async () => {
       // Vercel deployment: use the project's private Vercel Blob store.
       // BLOB_STORE_ID is created automatically when the store is connected.
-      if (process.env.VERCEL && process.env.BLOB_STORE_ID) {
+      if (process.env.VERCEL) {
+        if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) {
+          throw apiError(503, "Persistent storage is not configured. Please retry after the storage connection is restored.");
+        }
         try {
           const { get, put } = await import("@vercel/blob");
           const options = {
@@ -740,11 +743,15 @@ async function getBlobStore() {
           return {
             async get(key) {
               const result = await get(key, options);
-              if (!result || result.statusCode !== 200) {
-                return null;
-              }
+              if (!result) return null;
+              if (result.statusCode !== 200) throw apiError(503, "Storage read failed. Please retry; no workspace was created.");
               const text = await new Response(result.stream).text();
-              return safeJsonParse(text, null);
+              try {
+                const value = JSON.parse(text);
+                if (!value || typeof value !== "object") throw new Error("Invalid workspace");
+                return value;
+              }
+              catch { throw apiError(409, "Workspace data could not be read. Recovery is required; no data was replaced."); }
             },
             async setJSON(key, value) {
               await put(key, JSON.stringify(value), {
@@ -775,7 +782,8 @@ async function getBlobStore() {
     })();
   }
 
-  return blobStorePromise;
+  try { return await blobStorePromise; }
+  catch (error) { blobStorePromise = undefined; throw error; }
 }
 
 function workspaceKeyFromBusinessKey(key) {
@@ -797,27 +805,44 @@ function localWorkspacePath(identity) {
 async function loadWorkspace(identity) {
   const candidateKeys = businessKeyCandidates(identity);
   const store = await getBlobStore();
-  if (store) {
-    for (const key of candidateKeys) {
-      const workspace = await store.get(workspaceKeyFromBusinessKey(key), { type: "json" });
-      if (workspace) {
-        return normalizeWorkspace(workspace, identity);
+  const matches = [];
+  for (const key of candidateKeys) {
+    let workspace;
+    if (store) {
+      workspace = await store.get(workspaceKeyFromBusinessKey(key), { type: "json" });
+    } else {
+      try {
+        workspace = JSON.parse(await readFile(localWorkspacePathFromBusinessKey(key), "utf8"));
+        if (!workspace || typeof workspace !== "object") throw new Error("Invalid workspace");
+      } catch (error) {
+        if (error.code === "ENOENT") continue;
+        throw apiError(503, "Workspace read failed. Please retry; no data was replaced.");
       }
     }
-
-    return null;
-  }
-
-  for (const key of candidateKeys) {
-    try {
-      const contents = await readFile(localWorkspacePathFromBusinessKey(key), "utf8");
-      return normalizeWorkspace(safeJsonParse(contents, null), identity);
-    } catch {
-      // Continue through legacy phone-key candidates before treating the workspace as missing.
+    if (workspace == null) continue;
+    // Never reinterpret an unsupported or incomplete migration as an empty v3 workspace.
+    if ((workspace.version && workspace.version !== 3) || !Array.isArray(workspace.documents)) {
+      throw apiError(409, "Workspace migration is incomplete or unsupported. Recovery is required; no data was replaced.");
     }
+    const owner = workspace.identity || workspace.businessProfile;
+    if (!owner || createBusinessKey(owner.email, owner.phone) !== identity.key) {
+      throw apiError(409, "Stored business identity does not match. No data was changed.");
+    }
+    matches.push({ key, workspace });
   }
-
-  return null;
+  if (!matches.length) return null;
+  // Prefer a populated legacy workspace over an accidentally created empty canonical one.
+  const populated = matches.filter(({ workspace }) => workspace.documents.length || workspace.clients?.length || workspace.catalog?.length);
+  const candidates = populated.length ? populated : matches;
+  if (candidates.length > 1) {
+    // Multiple independent copies cannot safely be merged: one may contain deletions.
+    throw apiError(409, "Multiple saved workspaces match this business. Recovery review is required; no records were changed.");
+  }
+  const selected = candidates[0];
+  const normalized = normalizeWorkspace(selected.workspace, identity);
+  // Continue writing the existing key. Do not copy, delete, or resurrect legacy records.
+  normalized.storageKey = selected.key;
+  return normalized;
 }
 
 async function saveWorkspace(workspace) {
@@ -831,11 +856,11 @@ async function saveWorkspace(workspace) {
   const store = await getBlobStore();
 
   if (store) {
-    await store.setJSON(workspaceKey(normalized.identity), normalized);
+    await store.setJSON(workspaceKeyFromBusinessKey(normalized.storageKey || normalized.identity.key), normalized);
     return normalized;
   }
 
-  const filePath = localWorkspacePath(normalized.identity);
+  const filePath = localWorkspacePathFromBusinessKey(normalized.storageKey || normalized.identity.key);
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(normalized, null, 2), "utf8");
   return normalized;
@@ -925,9 +950,16 @@ async function claimBusinessIdentity(request) {
   }
 
   const existing = await loadWorkspace(identity);
+  if (!existing && body.createIfMissing !== true) {
+    throw apiError(404, "No business matches these details. Check the email and phone, or choose Create new business.");
+  }
+  if (!existing && body.seed?.businessProfile &&
+      createBusinessKey(body.seed.businessProfile.email, body.seed.businessProfile.phone) !== identity.key) {
+    throw apiError(409, "The local workspace belongs to different business details. Switch business before creating an account.");
+  }
   const workspace = existing || mergeSeedWorkspace(emptyWorkspace(identity), body.seed, false);
 
-  const saved = await saveWorkspace(workspace);
+  const saved = existing || await saveWorkspace(workspace);
   return json(200, {
     ...publicWorkspace(saved),
     businessIdentity: identity,

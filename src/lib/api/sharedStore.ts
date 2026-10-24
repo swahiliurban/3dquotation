@@ -131,7 +131,9 @@ export function markBusinessIdentityMigrated(identity: BusinessIdentity) {
 }
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
-  const payload = (await response.json().catch(() => ({}))) as { error?: string };
+  let payload: { error?: string };
+  try { payload = await response.json(); }
+  catch { throw new Error("The workspace response was incomplete. Please retry; your records have not been replaced."); }
   if (!response.ok) {
     const error = new Error(payload.error || (response.status === 413
       ? "This request is too large. Reduce uploaded image sizes and try again."
@@ -175,6 +177,7 @@ async function apiRequest<T>(
     if (controller.signal.aborted) {
       throw new Error("The workspace request timed out. Your changes remain here. Check Records before retrying Save.");
     }
+    if (error instanceof TypeError) throw new Error("Could not reach shared storage. Check your network connection and retry.");
     throw error;
   } finally {
     window.clearTimeout(timeout);
@@ -182,18 +185,32 @@ async function apiRequest<T>(
 }
 
 export async function getRemoteBootstrap(identity: BusinessIdentity) {
-  return apiRequest<BootstrapPayload>("/api/bootstrap", { identity });
+  const payload = await apiRequest<BootstrapPayload>("/api/bootstrap", { identity });
+  validateBootstrap(payload);
+  return payload;
+}
+
+function validateBootstrap(payload: BootstrapPayload) {
+  if (!payload?.businessProfile || !payload.nextNumbers || !Array.isArray(payload.documents) ||
+      !Array.isArray(payload.clients) || !Array.isArray(payload.catalog)) {
+    throw new Error("The saved workspace response is incomplete. Please retry recovery.");
+  }
 }
 
 export async function claimRemoteBusinessIdentity(payload: {
   email: string;
   phone: string;
   seed: BootstrapPayload;
+  createIfMissing?: boolean;
 }) {
   const response = await apiRequest<BusinessIdentityBootstrap>("/api/business-identity", {
-    body: payload,
+    body: payload.createIfMissing ? payload : { email: payload.email, phone: payload.phone },
     method: "POST",
   });
+  validateBootstrap(response);
+  if (!response.businessIdentity?.email || !response.businessIdentity?.phone || !response.businessIdentity?.key) {
+    throw new Error("The workspace identity response is incomplete. Please retry recovery.");
+  }
   saveBusinessIdentity(response.businessIdentity);
   return response;
 }

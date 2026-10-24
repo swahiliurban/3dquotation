@@ -28,7 +28,7 @@ try {
     business: { name: 'Synthetic test', logoDataUrl: logo },
     client: { name: 'Test client' }, items: [], notes: 'Unicode 🌍 Kiswahili',
   }));
-  const initial = await call('business-identity', 'POST', { ...identity, seed: { documents } });
+  const initial = await call('business-identity', 'POST', { ...identity, createIfMissing: true, seed: { documents } });
   assert.equal(initial.data.documents.length, 100);
   assert.ok(initial.bytes > 50_000_000);
   assert.equal(initial.response.headers.get('content-encoding'), 'gzip');

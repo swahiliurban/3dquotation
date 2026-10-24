@@ -21,7 +21,6 @@ import {
   duplicateRemoteDocument,
   getRemoteBootstrap,
   getSavedBusinessIdentity,
-  hasMigratedBusinessIdentity,
   hasUsableBusinessIdentity,
   markBusinessIdentityMigrated,
   markRemoteDocumentShared,
@@ -110,6 +109,7 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
       theme: "light",
       user: null,
       isInitializing: true,
+      initializationError: null,
       isSyncingIdentity: false,
       businessIdentity: null,
       businessProfile: DEFAULT_BUSINESS_PROFILE,
@@ -121,19 +121,13 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
         invoice: 1,
       },
       initializeApp: async () => {
+        set({ isInitializing: true, initializationError: null });
         try {
-          const localPayload = getLocalBootstrap();
           const savedIdentity = getSavedBusinessIdentity();
 
           if (savedIdentity) {
             try {
-              const payload = hasMigratedBusinessIdentity(savedIdentity)
-                ? await getRemoteBootstrap(savedIdentity)
-                : await claimRemoteBusinessIdentity({
-                    email: savedIdentity.email,
-                    phone: savedIdentity.phone,
-                    seed: localPayload,
-                  });
+              const payload = await getRemoteBootstrap(savedIdentity);
               applyBootstrapState(set, payload);
               const activeIdentity: NonNullable<QuoteFlowState["businessIdentity"]> =
                 "businessIdentity" in payload
@@ -144,14 +138,15 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
               markBusinessIdentityMigrated(activeIdentity);
               return;
             } catch (error) {
-              console.warn("QuoteFlow shared workspace bootstrap failed.", error);
+              set({ businessIdentity: savedIdentity });
+              throw error;
             }
           }
 
-          applyBootstrapState(set, localPayload);
+          applyBootstrapState(set, getLocalBootstrap());
         } catch (error) {
           console.error("QuoteFlow bootstrap failed.", error);
-          resetWorkspaceState(set);
+          set({ initializationError: error instanceof Error ? error.message : "Could not load your workspace. Please retry." });
         } finally {
           set({ isInitializing: false });
         }
@@ -159,25 +154,31 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
       setTheme: (theme) => {
         set({ theme });
       },
-      connectBusinessIdentity: async ({ email, phone, seedProfile }) => {
+      connectBusinessIdentity: async ({ email, phone, seedProfile, createIfMissing }) => {
         const current = get();
         if (!hasUsableBusinessIdentity(email, phone)) {
           throw new Error("Business email and phone number are required.");
         }
 
-        if (
-          current.businessIdentity &&
-          sameBusinessIdentity(current.businessIdentity, { email, phone })
-        ) {
-          return { workspaceExists: true };
-        }
+        if (current.isSyncingIdentity) throw new Error("A workspace lookup is already in progress. Please wait.");
 
         set({ isSyncingIdentity: true });
         try {
+          const sourceIdentity = current.businessIdentity || current.businessProfile;
+          const canSeed = !hasUsableBusinessIdentity(sourceIdentity.email, sourceIdentity.phone) ||
+            sameBusinessIdentity(sourceIdentity, { email, phone });
+          const seed = createSeedPayload(current, seedProfile);
+          if (!canSeed) {
+            seed.documents = [];
+            seed.clients = [];
+            seed.catalog = [];
+            seed.nextNumbers = { quotation: 1, invoice: 1 };
+          }
           const payload = await claimRemoteBusinessIdentity({
             email,
             phone,
-            seed: createSeedPayload(current, seedProfile),
+            createIfMissing,
+            seed,
           });
           applyBootstrapState(set, payload);
           set({ businessIdentity: payload.businessIdentity });
@@ -211,11 +212,12 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
           });
 
         if (needsIdentity) {
-          await get().connectBusinessIdentity({
+          const result = await get().connectBusinessIdentity({
             email: profile.email,
             phone: profile.phone,
             seedProfile: profile,
           });
+          if (result.workspaceExists) return;
         }
 
         const identity = get().businessIdentity;

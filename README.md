@@ -16,6 +16,8 @@ QuoteFlow is a mobile-first quotation and invoice app that opens straight into t
 
 ## Storage
 
+For recovery fixes, advanced Records search, test commands, and the prepared email-verification rollout, see [Recovery and search](docs/recovery-and-search.md). In Settings, use **Recover / retry business workspace** after entering contact details. If no matching business exists, verify the details before choosing **Create new business**.
+
 - In local development and local preview, the API stores shared business workspaces as JSON files under `server/data/business-workspaces`.
 - On Netlify, the API uses Netlify Blobs through `@netlify/blobs`, so records are site-scoped and available across devices.
 - Browser local storage is still used as a fallback before a business identity is connected and for the local theme preference.

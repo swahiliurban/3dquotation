@@ -1,5 +1,5 @@
 import { CheckCircle2, Cloud, Download, ImagePlus, LogOut, Plus, Save, Trash2 } from "lucide-react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "../components/ui/Button";
@@ -42,64 +42,33 @@ export function SettingsPage() {
   const values = watch();
   const watchedEmail = watch("email");
   const watchedPhone = watch("phone");
-  const lastIdentityLookupRef = useRef("");
   const [identityMessage, setIdentityMessage] = useState("");
+  const [missingIdentity, setMissingIdentity] = useState("");
+  const identityFields = normalizeIdentityFields(watchedEmail || "", watchedPhone || "");
+  const identityKey = `${identityFields.email}|${identityFields.phone}`;
 
-  useEffect(() => {
-    const normalized = normalizeIdentityFields(watchedEmail || "", watchedPhone || "");
-    const lookupKey = `${normalized.email}|${normalized.phone}`;
-
-    if (!hasUsableBusinessIdentity(normalized.email, normalized.phone)) {
-      setIdentityMessage("");
-      return;
+  async function handleConnect(createIfMissing = false) {
+    setMissingIdentity("");
+    try {
+      const result = await connectBusinessIdentity({
+        ...identityFields,
+        createIfMissing,
+        seedProfile: normalizeBusinessProfile(getValues()),
+      });
+      const message = result.workspaceExists ? "Saved business workspace loaded." : "Shared business workspace created.";
+      setIdentityMessage(message);
+      toast.success(message);
+    } catch (error) {
+      if ((error as { status?: number }).status === 404) setMissingIdentity(identityKey);
+      setIdentityMessage(error instanceof Error ? error.message : "Workspace unavailable. Please retry.");
     }
-
-    if (
-      sameBusinessIdentity(businessIdentity, normalized)
-    ) {
-      lastIdentityLookupRef.current = lookupKey;
-      setIdentityMessage("Shared workspace connected.");
-      return;
-    }
-
-    if (lastIdentityLookupRef.current === lookupKey) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      lastIdentityLookupRef.current = lookupKey;
-      void (async () => {
-        try {
-          const result = await connectBusinessIdentity({
-            email: normalized.email,
-            phone: normalized.phone,
-            seedProfile: normalizeBusinessProfile({
-              ...getValues(),
-              email: normalized.email,
-              phone: watchedPhone,
-            }),
-          });
-          const message = result.workspaceExists
-            ? "Saved business workspace loaded."
-            : "Shared business workspace created.";
-          setIdentityMessage(message);
-          toast.success(message);
-        } catch (error) {
-          lastIdentityLookupRef.current = "";
-          setIdentityMessage("Shared workspace is unavailable right now.");
-          console.warn("QuoteFlow could not connect the business identity.", error);
-        }
-      })();
-    }, 700);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [businessIdentity, connectBusinessIdentity, getValues, watchedEmail, watchedPhone]);
+  }
 
   async function handleSwitchBusiness() {
     await disconnectBusinessIdentity();
     setValue("email", "", { shouldDirty: true });
     setValue("phone", "", { shouldDirty: true });
-    lastIdentityLookupRef.current = "";
+    setMissingIdentity("");
     setIdentityMessage("Shared workspace disconnected. Enter another business email and phone to switch.");
     toast.success("Shared workspace disconnected.");
   }
@@ -190,6 +159,14 @@ export function SettingsPage() {
               <div>
                 <label className="form-label">Business email</label>
                 <input className="form-input" type="email" {...register("email")} />
+              </div>
+              <div className="flex flex-wrap gap-3 md:col-span-2">
+                <Button type="button" variant="secondary" disabled={isSyncingIdentity || !hasUsableBusinessIdentity(watchedEmail, watchedPhone)} onClick={() => void handleConnect()}>
+                  {isSyncingIdentity ? "Checking workspace..." : "Recover / retry business workspace"}
+                </Button>
+                {missingIdentity === identityKey && !sameBusinessIdentity(businessIdentity, identityFields) && (
+                  <Button type="button" disabled={isSyncingIdentity} onClick={() => void handleConnect(true)}>Create new business</Button>
+                )}
               </div>
               {(identityMessage || isSyncingIdentity) && (
                 <div className="md:col-span-2">

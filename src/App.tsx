@@ -94,6 +94,7 @@ function withSuspense(element: ReactNode) {
 export default function App() {
   const initializeApp = useQuoteFlowStore((state) => state.initializeApp);
   const isInitializing = useQuoteFlowStore((state) => state.isInitializing);
+  const initializationError = useQuoteFlowStore((state) => state.initializationError);
 
   useEffect(() => {
     void initializeApp();
@@ -107,6 +108,17 @@ export default function App() {
         <ThemedToaster />
       </>
     );
+  }
+
+  if (initializationError) {
+    return <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="glass-card max-w-lg space-y-4 p-6" role="alert">
+        <h1 className="text-2xl font-bold">Could not restore your workspace</h1>
+        <p>{initializationError}</p>
+        <p>Your saved identity is retained. Please check your connection and retry.</p>
+        <button className="form-input" onClick={() => void initializeApp()}>Retry recovery</button>
+      </div>
+    </div>;
   }
 
   return (
