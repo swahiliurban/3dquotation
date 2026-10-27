@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "preview:recovery": "node scripts/preview-recovery.mjs",
-    "test": "node --experimental-test-module-mocks tests/recovery.mjs && node tests/recovery-preview.mjs && node tests/store-recovery.mjs && node tests/record-search.mjs && node tests/large-workspace.mjs",
+    "test": "node --experimental-test-module-mocks tests/recovery.mjs && node tests/recovery-preview.mjs && node tests/recovery-network.mjs && node tests/store-recovery.mjs && node tests/record-search.mjs && node tests/preview-proxy.mjs && node tests/large-workspace.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:client": "vite",
     "dev:full": "node scripts/dev.mjs",

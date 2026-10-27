@@ -12,6 +12,16 @@ Production recovery and refresh also allow up to eleven minutes for a complete w
 
 ## Findings and changes
 
+### Browser connection and interrupted downloads
+
+Production now requires a shared business connection before showing the dashboard. Without a saved identity, the previous code showed that browser's local workspace, which could contain only two records while another browser showed the full shared account. Those local drafts remain in storage; they are not deleted or automatically uploaded. The dashboard displays the connected email and phone, and a failed startup offers a form to correct the saved details without first loading or replacing the old account.
+
+Read-only bootstrap and recovery retry up to three times for network interruptions, incomplete responses and temporary server errors, within the existing overall timeout. Missing/conflicting identities and all mutations are excluded from retries. Recovery never substitutes a local workspace on failure.
+
+New clients opt into `X-QuoteFlow-Transport: assets-v1`. The response contains a table of distinct embedded logos/signatures and document references; the browser restores the exact original strings before exposing the workspace. Historical images are preserved independently, missing references fail closed, and old clients still receive the original payload. This is a response-only change: the existing Blob files, v3 schema and business keys are untouched. A synthetic 52 MB workspace went from about 39.2 MB to 0.4 MB over the wire with a deep-equal restored payload.
+
+The production-style local preview also strips compression headers after its upstream fetch has decoded the response, preventing browsers from trying to decompress an already-decoded body.
+
 This checkout has v3 whole-workspace JSON storage at `business/<sha256>.json`, not partitioned v4 storage. Tanzanian mobile normalization already handles local, international and nine-digit forms; email hashing already trims and lowercases.
 
 The observed code paths that can produce an empty or misleading workspace were:

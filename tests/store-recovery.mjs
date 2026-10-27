@@ -7,6 +7,8 @@ globalThis.window = { localStorage: storage, setTimeout, clearTimeout };
 const identity = { email: 'saved@example.invalid', phone: '+255752220401', key: 'saved-key' };
 storage.setItem('quoteflow-active-business-identity-v1', JSON.stringify(identity));
 storage.setItem('quoteflow-business-identity-migrated-saved-key', 'true');
+const localDrafts = JSON.stringify({ documents: [{ id: 'local-1' }, { id: 'local-2' }] });
+storage.setItem('quoteflow-local-workspace-v2', localDrafts);
 const bundle = await build({ entryPoints: ['src/store/useQuoteFlowStore.ts'], bundle: true, write: false, format: 'esm', platform: 'browser' });
 const { useQuoteFlowStore: store } = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
 globalThis.fetch = async () => { throw new TypeError('Network unavailable'); };
@@ -18,6 +20,7 @@ assert.match(store.getState().initializationError, /network connection/);
 assert.deepEqual(store.getState().businessIdentity, identity);
 assert.equal(store.getState().isInitializing, false);
 assert.ok(storage.getItem('quoteflow-active-business-identity-v1'));
+assert.equal(store.getState().documents.length, 0, 'failed remote recovery must not display the two browser-only records');
 const profile = { ...store.getState().businessProfile, ...identity, name: 'Recovered business', bankDetails: 'Saved bank' };
 const payload = { user: { id: 'saved', name: 'Recovered business', ...identity }, businessProfile: profile,
   documents: [{ id: 'saved-document' }], clients: [{ id: 'client' }], catalog: [{ id: 'product' }], nextNumbers: { invoice: 22, quotation: 18 } };
@@ -36,6 +39,10 @@ await store.getState().updateBusinessProfile({ ...profile, name: '', bankDetails
 assert.equal(requests.length, 1, 'recovering from settings must not PUT a blank profile');
 assert.equal(store.getState().businessProfile.name, 'Recovered business');
 assert.equal(store.getState().businessProfile.bankDetails, 'Saved bank');
+store.setState({ initializationError: 'Failed earlier' });
+await store.getState().connectBusinessIdentity(identity);
+assert.equal(store.getState().initializationError, null, 'correcting the saved identity must leave the recovery error screen');
+assert.equal(storage.getItem('quoteflow-local-workspace-v2'), localDrafts, 'browser-only drafts must be preserved');
 await store.getState().connectBusinessIdentity({ email: 'different@example.invalid', phone: '0752220402', createIfMissing: true });
 assert.deepEqual(requests.at(-1).body.seed.documents, [], 'switching identity must not seed another business records');
 

@@ -19,17 +19,18 @@ interface LoginFormValues {
   phone: string;
 }
 
-export function AuthPage() {
+export function AuthPage({ recoveryOnly = false }: { recoveryOnly?: boolean }) {
   const navigate = useNavigate();
   const connectBusinessIdentity = useQuoteFlowStore((state) => state.connectBusinessIdentity);
   const isSyncingIdentity = useQuoteFlowStore((state) => state.isSyncingIdentity);
+  const identity = useQuoteFlowStore((state) => state.businessIdentity);
   const recoveryPreview = import.meta.env.VITE_RECOVERY_PREVIEW === 'true';
   const [mode, setMode] = useState<"signup" | "login">("login");
   const signupForm = useForm<SignupFormValues>({
     defaultValues: { name: "", email: "", phone: "" },
   });
   const loginForm = useForm<LoginFormValues>({
-    defaultValues: { email: "", phone: "" },
+    defaultValues: { email: identity?.email || "", phone: identity?.phone || "" },
   });
 
   async function handleSignup(values: SignupFormValues) {
@@ -92,7 +93,7 @@ export function AuthPage() {
                     : "text-slate-500 dark:text-slate-300"
                 }`}
                 onClick={() => setMode("signup")}
-                disabled={recoveryPreview}
+                disabled={recoveryPreview || recoveryOnly || isSyncingIdentity}
                 type="button"
               >
                 Sign up

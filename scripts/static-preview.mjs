@@ -94,15 +94,6 @@ async function servePath(response, pathname) {
 const server = createServer(async (request, response) => {
   const pathname = new URL(request.url || "/", "http://localhost").pathname;
 
-  if (pathname === "/auth" || pathname.startsWith("/auth/")) {
-    response.writeHead(302, {
-      Location: "/",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-    });
-    response.end();
-    return;
-  }
-
   if (pathname.startsWith("/api/")) {
     try {
       const apiUrl = new URL(request.url || "/", `http://localhost:${API_PORT}`);
@@ -122,6 +113,9 @@ const server = createServer(async (request, response) => {
       });
       response.statusCode = apiResponse.status;
       apiResponse.headers.forEach((value, key) => {
+        // fetch() already decompresses the upstream body. Do not tell the
+        // browser to decompress it again or reuse the compressed byte length.
+        if (["content-encoding", "content-length", "transfer-encoding"].includes(key.toLowerCase())) return;
         response.setHeader(key, value);
       });
       response.end(Buffer.from(await apiResponse.arrayBuffer()));

@@ -1,10 +1,10 @@
 # QuoteFlow
 
-QuoteFlow is a mobile-first quotation and invoice app that opens straight into the dashboard with no login page. Business email plus business phone act as the shared workspace identity inside Business settings, so the same business can restore saved settings, clients, catalog items, quotations, invoices, logos, and next document numbers on another device.
+QuoteFlow is a mobile-first quotation and invoice app. Each production browser opens a shared business using its email and phone before showing the dashboard. The same details restore saved settings, clients, catalog items, quotations, invoices, logos, and next document numbers on another device. Browser-only drafts are retained separately and are not shown as a recovered shared account.
 
 ## What It Does
 
-- Opens directly to the dashboard with no separate sign-in page
+- Restores the connected business or asks which existing business to open
 - Connects shared records when the same business email and phone are entered
 - Saves business settings, clients, catalog items, logos, quotations, and invoices
 - Generates quotation and invoice numbers from the latest shared business counter
@@ -91,7 +91,7 @@ Then open:
 
 ## Production Checklist
 
-- Dashboard loads without any sign-in page
+- A new browser asks for the business identity; returning browsers restore the connected business
 - Business email and phone connect the correct shared workspace
 - Saved quotations and invoices can be opened, edited, duplicated, downloaded, shared, converted, and deleted
 - Manual document numbers are accepted only when unique

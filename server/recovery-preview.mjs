@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { unpackWorkspace } from '../shared/workspace-transfer.js';
 
 const SOURCE = 'https://3dquotation.vercel.app';
 function json(status, body) {
@@ -28,11 +29,11 @@ export async function handleRecoveryPreview(request, fetchRemote = fetch) {
   try {
     const response = await fetchRemote(`${SOURCE}/api/bootstrap`, {
       method: 'GET', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(600_000),
-      headers: { 'X-QuoteFlow-Business-Email': email, 'X-QuoteFlow-Business-Phone': phone },
+      headers: { 'X-QuoteFlow-Business-Email': email, 'X-QuoteFlow-Business-Phone': phone, 'X-QuoteFlow-Transport': 'assets-v1' },
     });
     if (response.status === 404) return json(404, { error: 'No matching workspace was found on the live site. Check your original business details. No account was created.' });
     if (!response.ok) return json(502, { error: `Live workspace recovery failed (HTTP ${response.status}). Retry; no local or live records were changed.` });
-    const payload = await response.json();
+    const payload = unpackWorkspace(await response.json());
     if (!Array.isArray(payload.documents) || !payload.businessProfile || !payload.nextNumbers || !Array.isArray(payload.clients) || !Array.isArray(payload.catalog)) {
       return json(502, { error: 'The live workspace response was incomplete. No local workspace was substituted.' });
     }

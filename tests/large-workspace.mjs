@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
+import { unpackWorkspace } from '../shared/workspace-transfer.js';
 
 const moduleUrl = new URL('../server/shared/api-handler.js', import.meta.url);
 const original = process.cwd();
@@ -12,14 +13,14 @@ process.chdir(directory);
 const { default: api } = await import(new URL('../api/index.js', import.meta.url));
 const identity = { email: 'regression@example.invalid', phone: '0001234567' };
 const headers = { 'Content-Type': 'application/json', 'X-QuoteFlow-Business-Email': identity.email, 'X-QuoteFlow-Business-Phone': identity.phone };
-async function call(path, method = 'GET', body) {
+async function call(path, method = 'GET', body, compact = false) {
   const response = await api.fetch(new Request('http://localhost/api?route=' + encodeURIComponent(path), {
-    method, headers, ...(body ? { body: JSON.stringify(body) } : {}),
+    method, headers: { ...headers, ...(compact ? { 'X-QuoteFlow-Transport': 'assets-v1' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}),
   }));
   assert.ok(response.ok, `HTTP ${response.status}`);
   const wire = Buffer.from(await response.arrayBuffer());
   const decoded = response.headers.get('content-encoding') === 'gzip' ? gunzipSync(wire) : wire;
-  return { data: JSON.parse(decoded), bytes: decoded.length, wireBytes: wire.length, response };
+  return { data: unpackWorkspace(JSON.parse(decoded)), bytes: decoded.length, wireBytes: wire.length, response };
 }
 try {
   const logo = 'data:image/png;base64,' + randomBytes(390000).toString('base64');
@@ -33,6 +34,14 @@ try {
   assert.ok(initial.bytes > 50_000_000);
   assert.equal(initial.response.headers.get('content-encoding'), 'gzip');
   assert.equal(initial.response.headers.get('cache-control'), 'private, no-store');
+  const compact = await call('bootstrap', 'GET', undefined, true);
+  const { businessIdentity, workspaceExists, ...originalPayload } = initial.data;
+  assert.deepEqual(compact.data, originalPayload, 'compact recovery must preserve every image, document and counter');
+  assert.ok(compact.wireBytes < 1_000_000, 'repeated images must not be downloaded for every record');
+  const compactClaim = await call('business-identity', 'POST', identity, true);
+  assert.equal(compactClaim.data.workspaceExists, true);
+  assert.deepEqual(compactClaim.data.documents, initial.data.documents);
+  console.log(`PASS: large recovery shrank from ${initial.wireBytes} to ${compact.wireBytes} wire bytes with identical recovered data.`);
   const saved = await call('documents', 'POST', { id: 'new-save', type: 'quotation', client: {name:'New test'}, items:[], notes:'Verified 🌍' });
   assert.equal(saved.data.document.id, 'new-save');
   const refreshed = await call('bootstrap');

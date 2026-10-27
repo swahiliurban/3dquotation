@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { packWorkspace } from "../../shared/workspace-transfer.js";
 
 const STORE_NAME = "quoteflow-business-workspaces";
 const LOCAL_STORE_DIR = resolve(process.cwd(), "server", "data", "business-workspaces");
@@ -904,7 +905,7 @@ function json(status, payload) {
       ...(compressed ? { "Content-Encoding": "gzip" } : {}),
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers":
-        "Content-Type, X-QuoteFlow-Business-Email, X-QuoteFlow-Business-Phone",
+        "Content-Type, X-QuoteFlow-Business-Email, X-QuoteFlow-Business-Phone, X-QuoteFlow-Transport",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     },
   });
@@ -916,7 +917,7 @@ function noContent() {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers":
-        "Content-Type, X-QuoteFlow-Business-Email, X-QuoteFlow-Business-Phone",
+        "Content-Type, X-QuoteFlow-Business-Email, X-QuoteFlow-Business-Phone, X-QuoteFlow-Transport",
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     },
   });
@@ -960,7 +961,7 @@ async function claimBusinessIdentity(request) {
   const workspace = existing || mergeSeedWorkspace(emptyWorkspace(identity), body.seed, false);
 
   const saved = existing || await saveWorkspace(workspace);
-  return json(200, {
+  return workspaceResponse(request, {
     ...publicWorkspace(saved),
     businessIdentity: identity,
     workspaceExists: Boolean(existing),
@@ -969,7 +970,12 @@ async function claimBusinessIdentity(request) {
 
 async function bootstrapBusinessWorkspace(request) {
   const workspace = await getRequiredWorkspace(request);
-  return json(200, publicWorkspace(workspace));
+  return workspaceResponse(request, publicWorkspace(workspace));
+}
+
+function workspaceResponse(request, workspace) {
+  return json(200, request.headers.get('X-QuoteFlow-Transport') === 'assets-v1'
+    ? packWorkspace(workspace) : workspace);
 }
 
 async function updateBusinessSettings(request) {

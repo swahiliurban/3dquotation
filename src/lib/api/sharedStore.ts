@@ -4,6 +4,7 @@ import type {
   NextNumbers,
   QuoteFlowDocument,
 } from "../../types";
+import { unpackWorkspace } from "../../../shared/workspace-transfer.js";
 
 export interface BusinessIdentity {
   email: string;
@@ -133,16 +134,20 @@ export function markBusinessIdentityMigrated(identity: BusinessIdentity) {
 async function parseApiResponse<T>(response: Response): Promise<T> {
   let payload: { error?: string };
   try { payload = await response.json(); }
-  catch { throw new Error("The workspace response was incomplete. Please retry; your records have not been replaced."); }
+  catch {
+    throw Object.assign(new Error("The workspace response was incomplete. Please retry; your records have not been replaced."), {
+      retryable: response.ok || response.status >= 500,
+    });
+  }
   if (!response.ok) {
     const error = new Error(payload.error || (response.status === 413
       ? "This request is too large. Reduce uploaded image sizes and try again."
       : `Workspace request failed (HTTP ${response.status}). Your changes remain in the editor; please try again.`));
-    Object.assign(error, { status: response.status });
+    Object.assign(error, { status: response.status, retryable: [500, 502, 503, 504].includes(response.status) });
     throw error;
   }
 
-  return payload as T;
+  return unpackWorkspace(payload) as T;
 }
 
 async function apiRequest<T>(
@@ -151,6 +156,7 @@ async function apiRequest<T>(
     body?: unknown;
     identity?: Pick<BusinessIdentity, "email" | "phone"> | null;
     method?: "GET" | "POST" | "PUT" | "DELETE";
+    retryRead?: boolean;
   } = {},
 ) {
   const headers = new Headers();
@@ -165,16 +171,28 @@ async function apiRequest<T>(
   const controller = new AbortController();
   // Recovery downloads the entire workspace, including embedded document images.
   const recoveringWorkspace = path === "/api/bootstrap" || path === "/api/business-identity";
+  if (recoveringWorkspace) headers.set("X-QuoteFlow-Transport", "assets-v1");
   const timeout = window.setTimeout(() => controller.abort(), recoveringWorkspace ? 660_000 : 60_000);
   try {
-    const response = await fetch(path, {
-      method: options.method || "GET",
-      headers,
-      signal: controller.signal,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    });
-    if (response.status === 204) return undefined as T;
-    return await parseApiResponse<T>(response);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const response = await fetch(path, {
+          method: options.method || "GET",
+          headers,
+          signal: controller.signal,
+          cache: "no-store",
+          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        });
+        if (response.status === 204) return undefined as T;
+        return await parseApiResponse<T>(response);
+      } catch (error) {
+        const transient = error instanceof TypeError || (error as { retryable?: boolean })?.retryable;
+        if (!options.retryRead || !transient || controller.signal.aborted || attempt >= 2) throw error;
+        // Only read-only recovery can be repeated. Never repeat account creation,
+        // document saves, conversion, sharing, or deletion after an uncertain result.
+        await new Promise(resolve => window.setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
   } catch (error) {
     if (controller.signal.aborted) {
       if (recoveringWorkspace) {
@@ -190,7 +208,7 @@ async function apiRequest<T>(
 }
 
 export async function getRemoteBootstrap(identity: BusinessIdentity) {
-  const payload = await apiRequest<BootstrapPayload>("/api/bootstrap", { identity });
+  const payload = await apiRequest<BootstrapPayload>("/api/bootstrap", { identity, retryRead: true });
   validateBootstrap(payload);
   return payload;
 }
@@ -211,6 +229,7 @@ export async function claimRemoteBusinessIdentity(payload: {
   const response = await apiRequest<BusinessIdentityBootstrap>("/api/business-identity", {
     body: payload.createIfMissing ? payload : { email: payload.email, phone: payload.phone },
     method: "POST",
+    retryRead: !payload.createIfMissing,
   });
   validateBootstrap(response);
   if (!response.businessIdentity?.email || !response.businessIdentity?.phone || !response.businessIdentity?.key) {

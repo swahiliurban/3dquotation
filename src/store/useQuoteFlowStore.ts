@@ -181,7 +181,7 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
             seed,
           });
           applyBootstrapState(set, payload);
-          set({ businessIdentity: payload.businessIdentity });
+          set({ businessIdentity: payload.businessIdentity, initializationError: null });
           markBusinessIdentityMigrated(payload.businessIdentity);
           return { workspaceExists: payload.workspaceExists };
         } finally {

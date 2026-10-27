@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppShell } from "./components/layout/AppShell";
@@ -95,6 +95,7 @@ export default function App() {
   const initializeApp = useQuoteFlowStore((state) => state.initializeApp);
   const isInitializing = useQuoteFlowStore((state) => state.isInitializing);
   const initializationError = useQuoteFlowStore((state) => state.initializationError);
+  const [checkBusinessDetails, setCheckBusinessDetails] = useState(false);
 
   useEffect(() => {
     void initializeApp();
@@ -111,12 +112,18 @@ export default function App() {
   }
 
   if (initializationError) {
+    if (checkBusinessDetails) return <BrowserRouter>
+      <ThemeSync />
+      {withSuspense(<AuthPage recoveryOnly />)}
+      <ThemedToaster />
+    </BrowserRouter>;
     return <div className="flex min-h-screen items-center justify-center p-6">
       <div className="glass-card max-w-lg space-y-4 p-6" role="alert">
         <h1 className="text-2xl font-bold">Could not restore your workspace</h1>
         <p>{initializationError}</p>
         <p>Your saved identity is retained. Please check your connection and retry.</p>
         <button className="form-input" onClick={() => void initializeApp()}>Retry recovery</button>
+        <button className="form-input" onClick={() => setCheckBusinessDetails(true)}>Check business email and phone</button>
       </div>
     </div>;
   }
