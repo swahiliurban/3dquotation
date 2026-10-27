@@ -38,4 +38,21 @@ assert.equal(store.getState().businessProfile.name, 'Recovered business');
 assert.equal(store.getState().businessProfile.bankDetails, 'Saved bank');
 await store.getState().connectBusinessIdentity({ email: 'different@example.invalid', phone: '0752220402', createIfMissing: true });
 assert.deepEqual(requests.at(-1).body.seed.documents, [], 'switching identity must not seed another business records');
+
+// Simulate a connection whose response arrives after the ordinary one-minute
+// limit. Workspace reads must still succeed; writes retain their shorter limit.
+window.setTimeout = (callback, delay) => {
+  if (delay <= 60_000) queueMicrotask(callback);
+  return 0;
+};
+window.clearTimeout = () => {};
+globalThis.fetch = async (path, options) => new Promise((resolve, reject) => {
+  options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+  queueMicrotask(() => resolve(Response.json({ ...payload, businessIdentity: identity, workspaceExists: true })));
+});
+await store.getState().initializeApp();
+assert.equal(store.getState().initializationError, null, 'large recovery must survive the ordinary request limit');
+await store.getState().connectBusinessIdentity(identity);
+assert.deepEqual(store.getState().documents, payload.documents);
+await assert.rejects(() => store.getState().updateBusinessProfile(profile), /timed out/);
 console.log('PASS: failed bootstrap blocks local fallback, retry restores remote records, settings recovery preserves profile, identity switching excludes other business records.');

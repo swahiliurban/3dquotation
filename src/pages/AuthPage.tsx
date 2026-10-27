@@ -22,7 +22,9 @@ interface LoginFormValues {
 export function AuthPage() {
   const navigate = useNavigate();
   const connectBusinessIdentity = useQuoteFlowStore((state) => state.connectBusinessIdentity);
-  const [mode, setMode] = useState<"signup" | "login">("signup");
+  const isSyncingIdentity = useQuoteFlowStore((state) => state.isSyncingIdentity);
+  const recoveryPreview = import.meta.env.VITE_RECOVERY_PREVIEW === 'true';
+  const [mode, setMode] = useState<"signup" | "login">("login");
   const signupForm = useForm<SignupFormValues>({
     defaultValues: { name: "", email: "", phone: "" },
   });
@@ -35,6 +37,7 @@ export function AuthPage() {
       const result = await connectBusinessIdentity({
         email: values.email,
         phone: values.phone,
+        createIfMissing: true,
         seedProfile: normalizeBusinessProfile({
           name: values.name,
           email: values.email,
@@ -78,6 +81,7 @@ export function AuthPage() {
                   ? "Start or recover a business workspace with your business email and phone number."
                   : "Use the same business email and phone number to open your saved workspace."}
               </p>
+              {recoveryPreview && <p className="mt-3 text-sm font-semibold">Read-only recovery from 3dquotation.vercel.app. Enter your existing business details; this preview cannot create an account. The first download of a large workspace can take several minutes.</p>}
             </div>
 
             <div className="mt-6 rounded-[22px] bg-slate-100 p-1 dark:bg-white/5">
@@ -88,6 +92,7 @@ export function AuthPage() {
                     : "text-slate-500 dark:text-slate-300"
                 }`}
                 onClick={() => setMode("signup")}
+                disabled={recoveryPreview}
                 type="button"
               >
                 Sign up
@@ -163,7 +168,7 @@ export function AuthPage() {
                       </p>
                     ) : null}
                   </div>
-                  <Button icon={<UserPlus size={16} />} stretch type="submit">
+                  <Button icon={<UserPlus size={16} />} stretch type="submit" disabled={isSyncingIdentity}>
                     Open workspace
                   </Button>
                 </form>
@@ -207,8 +212,8 @@ export function AuthPage() {
                       </p>
                     ) : null}
                   </div>
-                  <Button icon={<LogIn size={16} />} stretch type="submit">
-                    Open workspace
+                  <Button icon={<LogIn size={16} />} stretch type="submit" disabled={isSyncingIdentity}>
+                    {isSyncingIdentity ? "Loading saved workspace..." : "Open workspace"}
                   </Button>
                 </form>
               )}

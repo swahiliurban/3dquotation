@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { handleApiRequest } from "./shared/api-handler.js";
+import { handleRecoveryPreview } from "./recovery-preview.mjs";
 
 const API_PORT = Number(process.env.QUOTEFLOW_API_PORT || 8787);
 
@@ -57,7 +58,8 @@ const server = createServer(async (request, response) => {
 
   try {
     const fetchRequest = await toFetchRequest(request);
-    const fetchResponse = await handleApiRequest(fetchRequest);
+    const fetchResponse = await (process.env.QUOTEFLOW_RECOVERY_PREVIEW === '1'
+      ? handleRecoveryPreview(fetchRequest) : handleApiRequest(fetchRequest));
 
     response.statusCode = fetchResponse.status;
     fetchResponse.headers.forEach((value, key) => {
@@ -78,6 +80,6 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(API_PORT, () => {
+server.listen(API_PORT, '127.0.0.1', () => {
   console.log(`QuoteFlow API listening on http://localhost:${API_PORT}`);
 });

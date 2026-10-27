@@ -289,6 +289,8 @@ export const useQuoteFlowStore = create<QuoteFlowState>()(
         return response.document;
       },
       markDocumentShared: async (documentId, via) => {
+        // Downloads still work in the recovery preview without writing share history remotely.
+        if (import.meta.env?.VITE_RECOVERY_PREVIEW === 'true') return;
         const identity = get().businessIdentity;
         if (identity) {
           const response = await markRemoteDocumentShared(identity, documentId, via);

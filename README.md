@@ -16,6 +16,12 @@ QuoteFlow is a mobile-first quotation and invoice app that opens straight into t
 
 ## Storage
 
+### Preview your live records locally (read-only)
+
+The ordinary development preview uses local JSON files, so matching email/phone details do not connect it to the Vercel data. To preview the updated interface with existing live records, run `npm run preview:recovery` and open `http://127.0.0.1:5174/auth`. This uses a separate local API on port 8877, reads the live `/api/bootstrap` endpoint, and blocks all writes and new accounts. Large workspaces may take several minutes to load. No deployment or Blob credentials are needed. Stop the preview with Ctrl+C.
+
+The recovery preview requires the live API and an internet connection. It never substitutes local records or creates an empty workspace on failure. PDF downloads work without writing share history. The existing live app's email/phone ownership-verification limitation still applies; this preview does not add authentication.
+
 For recovery fixes, advanced Records search, test commands, and the prepared email-verification rollout, see [Recovery and search](docs/recovery-and-search.md). In Settings, use **Recover / retry business workspace** after entering contact details. If no matching business exists, verify the details before choosing **Create new business**.
 
 - In local development and local preview, the API stores shared business workspaces as JSON files under `server/data/business-workspaces`.

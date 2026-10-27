@@ -164,7 +164,7 @@ export function SettingsPage() {
                 <Button type="button" variant="secondary" disabled={isSyncingIdentity || !hasUsableBusinessIdentity(watchedEmail, watchedPhone)} onClick={() => void handleConnect()}>
                   {isSyncingIdentity ? "Checking workspace..." : "Recover / retry business workspace"}
                 </Button>
-                {missingIdentity === identityKey && !sameBusinessIdentity(businessIdentity, identityFields) && (
+                {import.meta.env.VITE_RECOVERY_PREVIEW !== 'true' && missingIdentity === identityKey && !sameBusinessIdentity(businessIdentity, identityFields) && (
                   <Button type="button" disabled={isSyncingIdentity} onClick={() => void handleConnect(true)}>Create new business</Button>
                 )}
               </div>

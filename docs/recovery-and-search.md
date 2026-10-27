@@ -1,5 +1,15 @@
 # Recovery and Records search
 
+## Local preview follow-up
+
+The default preview reads `server/data/business-workspaces`, not the production Blob store. Entering the same identity selects that environment's copy; it does not automatically cross environments. A local fixture can therefore appear to be a new or almost-empty account even when production has many documents.
+
+Use `node scripts/preview-recovery.mjs` for a read-only view of the live account at `http://127.0.0.1:5174/auth`. This separate preview forwards only GET bootstrap requests to the fixed live origin. It never forwards seeds, registration or mutations and never substitutes the local fixture. Account creation is disabled. Download/share-history writes are skipped so PDF generation remains usable. Both local services bind to loopback. The first large workspace download can take several minutes; the recovery-specific timeout is longer than ordinary API requests.
+
+The read-only preview does not deploy code, migrate storage, or repair the current live endpoint. A successful partial HTTP response is insufficient proof of complete recovery; counts must be checked after the complete JSON response has loaded. Regression tests include a synthetic account with 100 invoices and 25 quotations; those counts are not evidence of a customer's production counts.
+
+Production recovery and refresh also allow up to eleven minutes for a complete workspace download, so large accounts are not aborted after the ordinary one-minute mutation timeout. The sign-up form explicitly requests account creation; login and recovery never do. Both paths search existing storage before any creation is considered.
+
 ## Findings and changes
 
 This checkout has v3 whole-workspace JSON storage at `business/<sha256>.json`, not partitioned v4 storage. Tanzanian mobile normalization already handles local, international and nine-digit forms; email hashing already trims and lowercases.

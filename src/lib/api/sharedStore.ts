@@ -163,7 +163,9 @@ async function apiRequest<T>(
   }
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 60_000);
+  // Recovery downloads the entire workspace, including embedded document images.
+  const recoveringWorkspace = path === "/api/bootstrap" || path === "/api/business-identity";
+  const timeout = window.setTimeout(() => controller.abort(), recoveringWorkspace ? 660_000 : 60_000);
   try {
     const response = await fetch(path, {
       method: options.method || "GET",
@@ -175,6 +177,9 @@ async function apiRequest<T>(
     return await parseApiResponse<T>(response);
   } catch (error) {
     if (controller.signal.aborted) {
+      if (recoveringWorkspace) {
+        throw new Error("Loading the saved workspace timed out. Please retry on a stable connection; no empty workspace was substituted.");
+      }
       throw new Error("The workspace request timed out. Your changes remain here. Check Records before retrying Save.");
     }
     if (error instanceof TypeError) throw new Error("Could not reach shared storage. Check your network connection and retry.");

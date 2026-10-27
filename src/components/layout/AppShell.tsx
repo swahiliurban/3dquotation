@@ -1,5 +1,5 @@
 import { FileText, Home, Moon, Plus, Receipt, Settings, Sun } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet } from "react-router-dom";
 import { Button } from "../ui/Button";
 import { useQuoteFlowStore } from "../../store/useQuoteFlowStore";
 import { cn } from "../../lib/utils";
@@ -15,6 +15,9 @@ const navItems = [
 export function AppShell() {
   const theme = useQuoteFlowStore((state) => state.theme);
   const setTheme = useQuoteFlowStore((state) => state.setTheme);
+  const identity = useQuoteFlowStore((state) => state.businessIdentity);
+  const recoveryPreview = import.meta.env.VITE_RECOVERY_PREVIEW === 'true';
+  if (recoveryPreview && !identity) return <Navigate to="/auth" replace />;
 
   return (
     <div className="min-h-screen bg-sand-50 text-slate-900 transition dark:bg-slate-950 dark:text-slate-100">
@@ -73,6 +76,8 @@ export function AppShell() {
         </header>
 
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+          {recoveryPreview && <p role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-amber-900">Read-only recovery preview: records loaded from 3dquotation.vercel.app. Changes and new accounts are disabled.</p>}
+          {import.meta.env.DEV && !recoveryPreview && <p role="status" className="mb-4 rounded-2xl bg-amber-50 p-4 text-amber-900">Local test workspace. This preview does not load your live invoices. Use the recovery preview to view your existing business records.</p>}
           <Outlet />
         </main>
       </div>
